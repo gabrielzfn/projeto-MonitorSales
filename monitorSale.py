@@ -30,3 +30,26 @@ def createTables(connection):
         )
     ''')
     connection.commit()
+
+
+# Função para adicionar um item na lista de itens em venda
+def addItem(connection, nome, valor, unico=False):
+    cursor = connection.cursor()
+    quantia = 1 if unico else int(input("Insira a quantidade deste produto: "))
+    cursor.execute ('''
+        INSERT INTO produtos (nome, valor, quantia, unico)
+        VALUES (?, ?, ?, ?)
+    ''', (nome, valor, quantia, unico))
+    connection.commit()
+    print("Produto cadastrado com sucesso!")
+
+
+# Função para listar todos os produtos
+def listItems(connection):
+    cursor = connection.cursor()
+    cursor.execute('SELECT * FROM produtos')
+    produtos = cursor.fetchall()
+    for produto in produtos:
+        print(produto)
+
+
