@@ -18,7 +18,7 @@ def createTables(connection):
             nome TEXT NOT NULL,
             preco REAL NOT NULL,
             quantia INTEGER NOT NULL,
-            unico BOOLEAN NOT NULL DEFAULT FALSE -- Nova coluna
+            unico BOOLEAN NOT NULL DEFAULT FALSE
         )
     ''')
     cursor.execute('''
@@ -44,7 +44,7 @@ def addItem(connection, nome, valor, unico=False):
         VALUES (?, ?, ?, ?)
     ''', (nome, valor, quantia, unico))
     connection.commit()
-    print("Produto cadastrado com sucesso!")
+    print("\nProduto cadastrado com sucesso!")
 
 
 
@@ -54,22 +54,23 @@ def listItems(connection):
     cursor.execute('SELECT * FROM produtos')
     produtos = cursor.fetchall()
     for produto in produtos:
-        print(produto)
+        id, nome, preco, quantia, unico = produto
+        preco_formatado = f"R$ {preco:.2f}"
+        print(f"ID: {id}, Nome: {nome}, Preço: {preco_formatado}, Quantia: {quantia}, Único: {unico}")
 
 
 
 # Função para registrar uma venda
 def registerSale(connection, produto_id, quantia):
     cursor = connection.cursor()
-
-    cursor.execute('SELECT unico, quantia FROM produtos WHERE id = ?', (produto_id,))
+    cursor.execute('SELECT unico, quantia, preco FROM produtos WHERE id = ?', (produto_id,))
     resultado = cursor.fetchone()
 
     if resultado is None:
-        print(f"Produto com ID {produto_id} não encontrado!")
+        print(f"\nProduto com ID {produto_id} não encontrado!")
         return
 
-    unico, estoque_atual = resultado
+    unico, estoque_atual, preco = resultado
 
     if unico:
         quantia = 1
@@ -77,19 +78,18 @@ def registerSale(connection, produto_id, quantia):
     if estoque_atual >= quantia:
         cursor.execute('''
             INSERT INTO vendas (produto_id, quantia, data_venda, status_venda)
-            VALUES (?, ?, datetime('now'), 'Pendente')
+            VALUES (?, ?, datetime('now'), 'Concluída')
         ''', (produto_id, quantia))
 
         cursor.execute('UPDATE produtos SET quantia = quantia - ? WHERE id = ?', (quantia, produto_id))
 
-        if unico:
-            cursor.execute('DELETE FROM produtos WHERE id = ?', (produto_id,))
-            print("Item único vendido e removido do estoque.")
-        
         connection.commit()
+        print("")
+        print("*" * 28)
         print("Venda registrada com sucesso!")
+        print("*" * 28)
     else:
-        print("Estoque insuficiente!")
+        print("\nEstoque insuficiente!")
 
 
 
@@ -97,13 +97,32 @@ def registerSale(connection, produto_id, quantia):
 def listSales(connection):
     cursor = connection.cursor()
     cursor.execute('''
-        SELECT vendas.id, produtos.nome, vendas.quantia, vendas.data_venda, vendas.status_venda
+        SELECT vendas.id, produtos.nome, vendas.quantia, vendas.data_venda, vendas.status_venda, produtos.preco
         FROM vendas
         JOIN produtos ON vendas.produto_id = produtos.id
     ''')
     vendas = cursor.fetchall()
     for venda in vendas:
-        print(venda)
+        id, nome, quantia, data_venda, status_venda, preco = venda
+        preco_formatado = f"R$ {preco:.2f}"
+        print(f"ID Venda: {id}, Produto: {nome}, Quantia: {quantia}, Data: {data_venda}, Status: {status_venda}, Preço: {preco_formatado}")
+
+
+
+# Função para resumo de vendas
+def salesSummary(connection):
+    cursor = connection.cursor()
+    cursor.execute('''
+        SELECT SUM(produtos.preco * vendas.quantia) as total_vendas
+        FROM vendas
+        JOIN produtos ON vendas.produto_id = produtos.id
+        WHERE vendas.status_venda = 'Concluída'
+    ''')
+    total_vendas = cursor.fetchone()[0]
+    if total_vendas:
+        print(f"Total de vendas: R$ {total_vendas:.2f}")
+    else:
+        print("\nNenhuma venda concluída registrada.")
 
 
 
@@ -113,19 +132,21 @@ def main():
     createTables(connection)
 
     while True:
-        print("\n=" * 28)
-        print("\nSistema de Cadastro e Vendas")
+        print("")
+        print("=" * 28)
+        print("Sistema de Cadastro e Vendas")
         print("-" * 28)
         print("1. Cadastrar Produto")
         print("2. Listar Produtos")
         print("3. Registrar Venda")
         print("4. Listar Vendas")
-        print("5. Sair")
+        print("5. Resumo de Vendas")
+        print("6. Sair")
         print("=" * 28)
         opcao = input("Escolha uma opção: ")
 
         if opcao == '1':
-            nome = input("Nome do produto: ")
+            nome = input("\nNome do produto: ")
             valor = float(input("Preço do produto: "))
             unico = input("É um item único? (s/n): ").lower() == 's'
             addItem(connection, nome, valor, unico)
@@ -140,6 +161,9 @@ def main():
             print("\nLista de Vendas:")
             listSales(connection)
         elif opcao == '5':
+            print("\nResumo de Vendas:")
+            salesSummary(connection)
+        elif opcao == '6':
             break
         else:
             print("Opção inválida!")
