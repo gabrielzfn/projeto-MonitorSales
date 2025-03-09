@@ -22,7 +22,7 @@ Este é um sistema simples de cadastro de produtos e controle de vendas desenvol
 ### 🎯 Como Usar
 1. **Clone o repositório**:
    ```bash
-   git clone https://github.com/seu-usuario/sistema-vendas.git
+   git clone https://github.com/seu-usuario/projeto-MonitorSales.git
    ```
 2. Acesse a pasta do repositório:
    ```bash
